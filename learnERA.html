@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LearnERA - Student AI Agent</title>
+<script type="module">
+  import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+</script>
+<style>
+  :root { --primary-color: #6c63ff; }
+  body {
+    background-color: #121212;
+    color: #f5f5f5;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding-top: 50px;
+    padding-bottom: 50px; /* Added padding for scrolling */
+  }
+  .container {
+    background-color: #1e1e1e;
+    border-radius: 15px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  h1 { text-align: center; color: var(--primary-color); }
+  select, input, textarea, button {
+    width: 100%; margin: 10px 0; padding: 12px;
+    border-radius: 8px; border: none; font-size: 16px;
+    box-sizing: border-box;
+  }
+  select, input, textarea {
+    background-color: #2c2c2c; color: #f5f5f5;
+    border: 1px solid #444;
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none; border-color: var(--primary-color);
+  }
+  button {
+    background-color: var(--primary-color); color: white;
+    font-weight: bold; cursor: pointer;
+    transition: background 0.3s;
+  }
+  button:hover { background-color: #5b52d1; }
+  button:disabled { background-color: #555; cursor: not-allowed; }
+  .response {
+    background-color: #2c2c2c; padding: 15px;
+    border-radius: 10px; margin-top: 15px; min-height: 80px;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .modal-overlay {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000; transition: opacity 0.3s;
+  }
+  .modal-hidden { display: none; }
+  .modal-content {
+    background: #1e1e1e; padding: 25px;
+    border-radius: 15px; text-align: center;
+    width: 90%; max-width: 400px;
+    border: 1px solid #444;
+  }
+  .modal-content h2 { color: var(--primary-color); }
+  .modal-content p { font-size: 14px; color: #ccc; }
+  .modal-content input { margin-bottom: 15px; }
+  .reset-key {
+    font-size: 12px; background: none; color: #aaa;
+    text-decoration: underline; cursor: pointer;
+    padding: 5px; margin-top: 15px;
+  }
+  /* Style for the new credit line */
+  .footer-credit {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    margin-top: 25px;
+  }
+</style>
+</head>
+<body>
+<div id="apiKeyModal" class="modal-overlay modal-hidden">
+  <div class="modal-content">
+    <h2>Welcome to LearnERA!</h2>
+    <p>Please enter your Google AI API key to begin. Your key is stored only in your browser.</p>
+    <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API Key...">
+    <button id="saveApiKeyBtn">Save & Start</button>
+  </div>
+</div>
+
+<div class="container">
+  <h1>LearnERA</h1>
+  <select id="feature">
+    <option value="doubt">AI Doubt Solver</option>
+    <option value="notes">Notes & Summarization</option>
+    <option value="planner">Task Planner & Reminders</option>
+    <option value="quiz">Quiz & Self-Assessment</option>
+    <option value="motivation">Motivation & Productivity Booster</option>
+  </select>
+
+  <textarea id="userInput" rows="4" placeholder="Type your question, notes, or request here..."></textarea>
+  <button id="submitBtn">Send to LearnERA</button>
+
+  <div class="response" id="responseArea">LearnERA is ready to help! 🌌</div>
+  <button id="resetKeyBtn" class="reset-key">Change API Key</button>
+
+  <p class="footer-credit">Created with love and care by team ByteBOND ❤️</p>
+</div>
+
+<script type="module">
+  import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+  const submitBtn = document.getElementById('submitBtn');
+  const userInput = document.getElementById('userInput');
+  const featureSelect = document.getElementById('feature');
+  const responseArea = document.getElementById('responseArea');
+  const apiKeyModal = document.getElementById('apiKeyModal');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+  const resetKeyBtn = document.getElementById('resetKeyBtn');
+
+  let genAI;
+  let model;
+
+  function initializeAI(apiKey) {
+    if (!apiKey) return;
+    try {
+      genAI = new GoogleGenerativeAI(apiKey);
+      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      apiKeyModal.classList.add('modal-hidden');
+    } catch (err) {
+      alert("Invalid API Key format. Please check and try again.");
+      console.error(err);
+      localStorage.removeItem('geminiApiKey');
+      apiKeyModal.classList.remove('modal-hidden');
+    }
+  }
+
+  window.addEventListener('load', () => {
+    const savedApiKey = localStorage.getItem('geminiApiKey');
+    if (savedApiKey) {
+      initializeAI(savedApiKey);
+    } else {
+      apiKeyModal.classList.remove('modal-hidden');
+    }
+  });
+
+  saveApiKeyBtn.addEventListener('click', () => {
+    const apiKey = apiKeyInput.value.trim();
+    if (apiKey) {
+      localStorage.setItem('geminiApiKey', apiKey);
+      initializeAI(apiKey);
+    } else {
+      alert("Please enter an API key.");
+    }
+  });
+
+  resetKeyBtn.addEventListener('click', () => {
+    localStorage.removeItem('geminiApiKey');
+    apiKeyModal.classList.remove('modal-hidden');
+    responseArea.textContent = "API Key reset. Please enter a new one.";
+  });
+
+  function getSystemPrompt(feature) {
+    switch(feature) {
+      case 'doubt': return "You are an AI Doubt Solver. Clearly and concisely answer the student's question: ";
+      case 'notes': return "You are a note-taking assistant. Summarize the following text into key bullet points: ";
+      case 'planner': return "You are a task planner. Create a simple, actionable to-do list based on the following request: ";
+      case 'quiz': return "You are a quiz master. Generate a short, 3-question multiple-choice quiz based on the following topic. Provide the answers at the end.: ";
+      case 'motivation': return "You are a motivational coach. Provide a short, powerful, and encouraging message based on this student's situation: ";
+      default: return "You are a helpful student assistant. Respond to this request: ";
+    }
+  }
+
+  async function callAI() {
+    if (!model) {
+      responseArea.textContent = "Please set your API key first! 🔑";
+      apiKeyModal.classList.remove('modal-hidden');
+      return;
+    }
+    if (userInput.value.trim() === "") {
+        responseArea.textContent = "Please enter something first! 😊";
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Thinking...";
+    responseArea.textContent = "LearnERA is thinking… 🤔";
+
+    try {
+      const fullPrompt = getSystemPrompt(featureSelect.value) + userInput.value;
+      const result = await model.generateContent(fullPrompt);
+      const text = result.response.text();
+      responseArea.textContent = text;
+    } catch (err) {
+      responseArea.textContent = "Oops, something went wrong. This could be due to an invalid API Key or a network issue. Please check your key or the browser console (F12) for errors. 😟\n\n" + err.message;
+      console.error(err);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send to LearnERA";
+    }
+  }
+  
+  submitBtn.addEventListener('click', callAI);
+  userInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); 
+        callAI();
+    }
+  });
+</script>
+</body>
+</html>
+
