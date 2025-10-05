@@ -175,7 +175,7 @@
     if (!apiKey) return;
     try {
       genAI = new GoogleGenerativeAI(apiKey);
-      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
       apiKeyModal.classList.add('modal-hidden');
     } catch (err) {
       alert("Invalid API Key format. Please check and try again.");
@@ -260,4 +260,3 @@
 </script>
 </body>
 </html>
-
