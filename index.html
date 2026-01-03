@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LearnERA - Student AI Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%236c63ff' d='M50,5 C74.85,5 95,25.15 95,50 C95,74.85 74.85,95 50,95 C25.15,95 5,74.85 5,50 C5,25.15 25.15,5 50,5 Z M50,15 C30.67,15 15,30.67 15,50 C15,69.33 30.67,85 50,85 C69.33,85 85,69.33 85,50 C85,30.67 69.33,15 50,15 Z M50,40 C55.52,40 60,44.48 60,50 C60,55.52 55.52,60 50,60 C44.48,60 40,55.52 40,50 C40,44.48 44.48,40 50,40 Z'%3E%3C/path%3E%3C/svg%3E">
 <style>
   :root { --primary-color: #6c63ff; }
@@ -17,6 +18,8 @@
   button:hover { background-color: #5b52d1; }
   button:disabled { background-color: #555; cursor: not-allowed; }
   .response { background-color: #2c2c2c; padding: 15px; border-radius: 10px; margin-top: 15px; min-height: 80px; white-space: pre-wrap; word-wrap: break-word; }
+  /* Ensure markdown lists and spacing look good inside the response */
+  .response p { margin: 0 0 10px 0; }
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 0.3s; }
   .modal-hidden { display: none; }
   .modal-content { background: #1e1e1e; padding: 25px; border-radius: 15px; text-align: center; width: 90%; max-width: 450px; border: 1px solid #444; }
@@ -39,15 +42,6 @@
     <h2>Welcome to LearnERA!</h2>
     <p>Please enter your Google AI API key to begin.</p>
     <a href="https://aistudio.google.com/app/apikey" target="_blank">Get your free API key here.</a>
-    <details>
-      <summary>How do I get an API key?</summary>
-      <ol>
-        <li>Click the link above to open Google AI Studio.</li>
-        <li>Sign in with your Google Account.</li>
-        <li>Click <strong>+ Create API key</strong>.</li>
-        <li>Copy your secret key and paste it below.</li>
-      </ol>
-    </details>
     <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API Key...">
     <button id="saveApiKeyBtn">Save & Start</button>
   </div>
@@ -73,7 +67,6 @@
 </div>
 
 <script type="module">
-  // Using the latest Google Gen AI SDK for JS
   import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@latest";
 
   const submitBtn = document.getElementById('submitBtn');
@@ -89,14 +82,8 @@
 
   function initializeAI(apiKey) {
     if (!apiKey) return;
-    try {
-      genAI = new GoogleGenerativeAI(apiKey);
-      apiKeyModal.classList.add('modal-hidden');
-    } catch (err) {
-      alert("Error initializing AI. Check your key.");
-      localStorage.removeItem('geminiApiKey');
-      apiKeyModal.classList.remove('modal-hidden');
-    }
+    genAI = new GoogleGenerativeAI(apiKey);
+    apiKeyModal.classList.add('modal-hidden');
   }
 
   window.addEventListener('load', () => {
@@ -140,7 +127,6 @@
     responseArea.textContent = "LearnERA is thinking… 🤔";
 
     try {
-      // UPDATED: Using gemini-3-flash-preview for latest 2026 capabilities
       const model = genAI.getGenerativeModel({ 
         model: "gemini-3-flash-preview",
         systemInstruction: getSystemPrompt(featureSelect.value)
@@ -148,9 +134,12 @@
 
       const result = await model.generateContent(input);
       const response = await result.response;
-      responseArea.textContent = response.text();
+      
+      // FIX: Changed .textContent to .innerHTML + marked.parse() to fix the asterisks
+      responseArea.innerHTML = marked.parse(response.text());
+      
     } catch (err) {
-      responseArea.textContent = "⚠️ Connection error. Please verify your API key or try again later.";
+      responseArea.textContent = "⚠️ Something went wrong. Check your connection or API key.";
       console.error(err);
     } finally {
       submitBtn.disabled = false;
